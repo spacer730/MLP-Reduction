@@ -5,10 +5,12 @@ import matplotlib.pyplot as plt
 import os
 import umap
 from astropy.io import fits
+from astropy.table import Table
 
 np.random.seed(33)
 
 #Load the data en reshape it in the form we want
+"""
 print('Openining the data file')
 fdata = fits.open('Data/COSMOSadaptdepth_ugriZYJHKs_rot_photoz_x_G10CosmosCatv04_plus_observed_targets_09October2012_removed_magnitudes_larger_90.fits')[1].data
 print('File is open')
@@ -43,11 +45,36 @@ zspec = fdata['zspec']
 
 X = np.array([H, J, Ks, Y, Z, g, i, r, u])
 X = X.transpose() #This ensures that each array entry is the 9 magnitudes of a galaxy
+"""
+
+sdata = Table.read('Data/Synthethic-galaxy-data-20000-samples.dat', format='ascii')
+sdata = np.array(sdata)
+
+u = sdata['u']
+g = sdata['g']
+r = sdata['r']
+i = sdata['i']
+z = sdata['z']
+u_noerr = sdata['u_noerr']
+g_noerr = sdata['g_noerr']
+r_noerr = sdata['r_noerr']
+i_noerr = sdata['i_noerr']
+z_noerr = sdata['z_noerr']
+z_redshift = sdata['z_redshift']
+galaxy_type = sdata['type']
+
+X = np.array([u, g, r, i, z])
+X = X.transpose()
+
+X_noerr = np.array([u_noerr, g_noerr, r_noerr, i_noerr, z_noerr])
+X_noerr = X_noerr.transpose()
 
 #Shuffle data and build training and test set
 permuted_indices = np.random.permutation(len(X))
+X_perm_noerr = X_noerr[permuted_indices]
 X_perm = X[permuted_indices]
-zspec_perm = zspec[permuted_indices]
+z_redshift_perm = z_redshift[permuted_indices]
+#zspec_perm = zspec[permuted_indices]
 
 cut_off = int(0.8*len(X_perm))
 X_train = X_perm[0:cut_off]
@@ -63,7 +90,7 @@ embedding = reducer.fit_transform(X_perm)
 
 #visualize the distribution of galaxies in the compressed feature space
 fig, axs = plt.subplots()
-CS = axs.scatter(embedding[:, 0], embedding[:, 1], 10, c=zspec_perm, cmap='Blues') #x,y coordinates and the size of the dot
+CS = axs.scatter(embedding[:, 0], embedding[:, 1], 10, c=z_redshift_perm, cmap='Blues') #x,y coordinates and the size of the dot
 cbar = fig.colorbar(CS)
-cbar.ax.set_ylabel('spectral redshift')
+cbar.ax.set_ylabel('Redshift')
 plt.show()

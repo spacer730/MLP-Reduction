@@ -1,4 +1,3 @@
-import tensorflow as tf
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -38,8 +37,8 @@ mass = fdata['MASS_MED']
 SSFR = fdata['SSFR_MED']
 age = fdata['AGE']
 
-X = np.array([u, B, V, r, ip, zpp, yHSC, Y, J, H, Ks])#, ch1, ch2, ch3, ch4]) #ch3 has many errors
-X = X.transpose() #This ensures that each array entry is the 9 magnitudes of a galaxy
+X = np.array([u, B, V, r, ip, zpp, yHSC, Y, J, H, Ks, ch1, ch2])#, ch3, ch4]) ch3 and ch4 have many errors
+X = X.transpose() #This makes it so that each array entry is all band magnitudes of a galaxy
 
 #Shuffle data and build training and test set
 permuted_indices = np.random.permutation(len(X))
@@ -49,29 +48,31 @@ mass_perm = mass[permuted_indices]
 SSFR_perm = SSFR[permuted_indices]
 age_perm = age[permuted_indices]
 
+good_indices = np.argwhere((np.abs(zphoto_perm)<90) & (np.abs(mass_perm)<90) & (np.abs(SSFR_perm)<90) & (age_perm>100) & (np.abs(X_perm[:,-1])<=90) & (np.abs(X_perm[:,-2])<=90)).flatten()
+
+X_perm = X_perm[good_indices]
+zphoto_perm = zphoto_perm[good_indices]
+mass_perm = mass_perm[good_indices]
+SSFR_perm = SSFR_perm[good_indices]
+age_perm = age_perm[good_indices]
+
 #Build an instance of the UMAP algorithm class and use it on the dataset
 reducer = umap.UMAP()
 embedding = reducer.fit_transform(X_perm)
 
 #visualize the distribution of galaxies in the compressed feature space
 fig, axs = plt.subplots()
+
 #Split the dataset into two different groups
-
-"""
-split = np.mean(zspec_perm)+np.var(zspec_perm)**0.5
-split_a = zspec_perm<split
-split_b = zspec_perm>=split
-
-split = np.mean(z_redshift_perm)+np.var(z_redshift_perm)**0.5
-split_a = z_redshift_perm<split
-split_b = z_redshift_perm>=split
-"""
+split = np.mean(SSFR_perm)-np.var(SSFR_perm)**0.5
+split_a = SSFR_perm<split
+split_b = SSFR_perm>=split
 
 #x,y coordinates and the size of the dot and whether to use a logscale for the colors
-CSa = axs.scatter(embedding[:, 0], embedding[:, 1], 10)#, c=zphto_perm, cmap='summer', norm=matplotlib.colors.LogNorm())
+#CSa = axs.scatter(embedding[:, 0][split_a], embedding[:, 1][split_a], 3, c=SSFR_perm[split_a], cmap='summer')#, norm=matplotlib.colors.LogNorm())
 #cbara = fig.colorbar(CSa)
-#CSb = axs.scatter(embedding[:, 0][split_b], embedding[:, 1][split_b], 10, c=X_perm[3][split_b], cmap='autumn_r')#, norm=matplotlib.colors.LogNorm(vmin=split,vmax=np.max(zspec_perm)))
-#cbarb = fig.colorbar(CSb)
-#cbara.set_label('zphoto')
-#cbarb.set_label('1.3<=Z')
+CSb = axs.scatter(embedding[:, 0][split_b], embedding[:, 1][split_b], 3, c=SSFR_perm[split_b], cmap='autumn_r')#, norm=matplotlib.colors.LogNorm())
+cbarb = fig.colorbar(CSb)
+#cbara.set_label('SSFR<-9.87')
+cbarb.set_label('-9.87<=SSFR')
 plt.show()

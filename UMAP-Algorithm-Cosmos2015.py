@@ -37,18 +37,31 @@ mass = fdata['MASS_MED']
 SSFR = fdata['SSFR_MED']
 age = fdata['AGE']
 
-X = np.array([u, B, V, r, ip, zpp, yHSC, Y, J, H, Ks, ch1, ch2])#, ch3, ch4]) ch3 and ch4 have many errors
+u_B = u-B
+B_V = B-V
+V_r = V-r
+r_ip = r-ip
+ip_zpp = ip-zpp
+zpp_yHSC = zpp-yHSC
+yHSC_Y = yHSC-Y
+Y_J = Y-J
+J_H = J-H
+H_Ks = H-Ks
+
+X = np.array([u, u_B, B_V, V_r, r_ip, ip_zpp, zpp_yHSC, yHSC_Y, Y_J, J_H, H_Ks])#, ch1, ch2])#, ch3, ch4]) ch3 and ch4 have many errors
 X = X.transpose() #This makes it so that each array entry is all band magnitudes of a galaxy
 
 #Shuffle data and build training and test set
 permuted_indices = np.random.permutation(len(X))
 X_perm = X[permuted_indices]
-zphoto_perm = zphoto[permuted_indices]
-mass_perm = mass[permuted_indices]
-SSFR_perm = SSFR[permuted_indices]
-age_perm = age[permuted_indices]
+#X_perm = X_perm.reshape((np.shape(X_perm)[0],np.shape(X_perm)[-1]))
+zphoto_perm = zphoto[permuted_indices]#.reshape(-1)
+mass_perm = mass[permuted_indices]#.reshape(-1)
+SSFR_perm = SSFR[permuted_indices]#.reshape(-1)
+age_perm = age[permuted_indices]#.reshape(-1)
 
-good_indices = np.argwhere((np.abs(zphoto_perm)<90) & (np.abs(mass_perm)<90) & (np.abs(SSFR_perm)<90) & (age_perm>100) & (np.abs(X_perm[:,-1])<=90) & (np.abs(X_perm[:,-2])<=90)).flatten()
+#Remove problematic galaxies
+good_indices = np.argwhere((np.abs(zphoto_perm)<90) & (np.abs(mass_perm)<90) & (np.abs(SSFR_perm)<90) & (age_perm>100)).flatten() #& (np.abs(X_perm[:,-1])<=90) & (np.abs(X_perm[:,-2])<=90)).flatten()
 
 X_perm = X_perm[good_indices]
 zphoto_perm = zphoto_perm[good_indices]
@@ -56,23 +69,47 @@ mass_perm = mass_perm[good_indices]
 SSFR_perm = SSFR_perm[good_indices]
 age_perm = age_perm[good_indices]
 
+#Take only data from a certain bin then throw this into UMAP
+binned_indices = np.argwhere((zphoto_perm >= 0.9) & (zphoto_perm < 1.1)).flatten()
+
+X_perm_bin = X_perm[binned_indices]
+zphoto_perm_bin = zphoto_perm[binned_indices]
+mass_perm_bin = mass_perm[binned_indices]
+SSFR_perm_bin = SSFR_perm[binned_indices]
+age_perm_bin = age_perm[binned_indices]
+
 #Build an instance of the UMAP algorithm class and use it on the dataset
 reducer = umap.UMAP()
-embedding = reducer.fit_transform(X_perm)
+embedding = reducer.fit_transform(X_perm_bin)
+
+"""
+#Take data from bin out of UMAP
+#binned_indices = np.argwhere((zphoto_perm >= 1.1) & (zphoto_perm<1.3)).flatten()
+binned_indices = np.argwhere((X_perm[:,0] >= 23) & (X_perm[:,0] < 24)).flatten()
+
+X_perm_bin = X_perm[binned_indices]
+embedding_bin = embedding[binned_indices]
+
+zphoto_perm_bin = zphoto_perm[binned_indices]
+mass_perm_bin = mass_perm[binned_indices]
+SSFR_perm_bin = SSFR_perm[binned_indices]
+age_perm_bin = age_perm[binned_indices]
+"""
+
+#Split the dataset into two different groups
+split = -9.25#np.mean(zphoto_perm_bin)+np.var(zphoto_perm_bin)**0.5
+split_a = SSFR_perm_bin<split
+split_b = SSFR_perm_bin>=split
 
 #visualize the distribution of galaxies in the compressed feature space
 fig, axs = plt.subplots()
 
-#Split the dataset into two different groups
-split = np.mean(SSFR_perm)-np.var(SSFR_perm)**0.5
-split_a = SSFR_perm<split
-split_b = SSFR_perm>=split
-
 #x,y coordinates and the size of the dot and whether to use a logscale for the colors
-#CSa = axs.scatter(embedding[:, 0][split_a], embedding[:, 1][split_a], 3, c=SSFR_perm[split_a], cmap='summer')#, norm=matplotlib.colors.LogNorm())
+#CSa = axs.scatter(embedding[:, 0][split_a], embedding[:, 1][split_a], 3, c=SSFR_perm_bin[split_a], cmap='summer')#, norm=matplotlib.colors.LogNorm())#, norm=matplotlib.colors.Normalize(vmin=7,vmax=9))
 #cbara = fig.colorbar(CSa)
-CSb = axs.scatter(embedding[:, 0][split_b], embedding[:, 1][split_b], 3, c=SSFR_perm[split_b], cmap='autumn_r')#, norm=matplotlib.colors.LogNorm())
+axs.text(5,6,'0.9<=z<1.1',color='k')
+CSb = axs.scatter(embedding[:, 0][split_b], embedding[:, 1][split_b], 3, c=SSFR_perm_bin[split_b], cmap='autumn_r')#, norm=matplotlib.colors.LogNorm())
 cbarb = fig.colorbar(CSb)
-#cbara.set_label('SSFR<-9.87')
-cbarb.set_label('-9.87<=SSFR')
+#cbara.set_label('SSFR < -9.25')
+cbarb.set_label('-9.25 <= SSFR')
 plt.show()

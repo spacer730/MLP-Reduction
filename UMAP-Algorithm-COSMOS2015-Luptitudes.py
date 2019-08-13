@@ -125,7 +125,8 @@ J_ip_LUPTICOLOR_AUTO = J_LUPTITUDE_AUTO - ip_LUPTITUDE_AUTO
 H_ip_LUPTICOLOR_AUTO = H_LUPTITUDE_AUTO - ip_LUPTITUDE_AUTO
 Ks_ip_LUPTICOLOR_AUTO = Ks_LUPTITUDE_AUTO - ip_LUPTITUDE_AUTO
 
-X = np.array([u_ip_LUPTICOLOR_AUTO, B_ip_LUPTICOLOR_AUTO, V_ip_LUPTICOLOR_AUTO, r_ip_LUPTICOLOR_AUTO, zpp_ip_LUPTICOLOR_AUTO, Y_ip_LUPTICOLOR_AUTO, J_ip_LUPTICOLOR_AUTO, H_ip_LUPTICOLOR_AUTO, Ks_ip_LUPTICOLOR_AUTO])
+#X = np.array([ip_LUPTITUDE_AUTO, u_ip_LUPTICOLOR_AUTO, B_ip_LUPTICOLOR_AUTO, V_ip_LUPTICOLOR_AUTO, r_ip_LUPTICOLOR_AUTO, zpp_ip_LUPTICOLOR_AUTO, Y_ip_LUPTICOLOR_AUTO, J_ip_LUPTICOLOR_AUTO, H_ip_LUPTICOLOR_AUTO, Ks_ip_LUPTICOLOR_AUTO])
+X = np.array([u_LUPTITUDE_AUTO, B_LUPTITUDE_AUTO, V_LUPTITUDE_AUTO, r_LUPTITUDE_AUTO, ip_LUPTITUDE_AUTO, zpp_LUPTITUDE_AUTO, Y_LUPTITUDE_AUTO, J_LUPTITUDE_AUTO, H_LUPTITUDE_AUTO, Ks_LUPTITUDE_AUTO])
 X = X.transpose() #This makes it so that each array entry is all band magnitudes of a galaxy
 
 #Shuffle data and build training and test set
@@ -159,10 +160,10 @@ split_b = SSFR_perm>=split
 fig, axs = plt.subplots()
 
 #x,y coordinates and the size of the dot and whether to use a logscale for the colors
-#CSa = axs.scatter(embedding[:, 0][split_a], embedding[:, 1][split_a], 3, c=SSFR_perm[split_a], cmap='summer')#, norm=matplotlib.colors.LogNorm())
+#CSa = axs.scatter(embedding[:, 0][split_a], embedding[:, 1][split_a], 3, c=SSFR_perm[split_a], cmap='summer')#, norm=matplotlib.colors.Normalize())
 #cbara = fig.colorbar(CSa)
 #axs.text(5,6,'0.9<=z<1.1',color='k')
-CSb = axs.scatter(embedding[:, 0][split_b], embedding[:, 1][split_b], 3, c=SSFR_perm[split_b], cmap='autumn_r')#, norm=matplotlib.colors.LogNorm())
+CSb = axs.scatter(embedding[:, 0][split_b], embedding[:, 1][split_b], 3, c=SSFR_perm[split_b], cmap='autumn_r')#, norm=matplotlib.colors.Normalize(vmin=9,vmax=12))
 cbarb = fig.colorbar(CSb)
 #cbara.set_label('SSFR < -9.83')
 cbarb.set_label('-9.83 <= SSFR')

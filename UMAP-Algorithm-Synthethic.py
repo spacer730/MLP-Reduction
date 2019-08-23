@@ -1,4 +1,3 @@
-import tensorflow as tf
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -8,7 +7,6 @@ import matplotlib.colors
 import matplotlib as mpl
 from astropy.io import fits
 from astropy.table import Table
-from numpy.ma import masked_array
 
 np.random.seed(33)
 

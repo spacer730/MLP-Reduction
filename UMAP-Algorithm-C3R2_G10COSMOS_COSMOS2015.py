@@ -1,4 +1,3 @@
-import tensorflow as tf
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -11,38 +10,91 @@ from astropy.table import Table
 
 np.random.seed(33)
 
-#Load the data en reshape it in the form we want
-print('Openining the data file')
-fdata = fits.open('Data/KOA_c3r2_v2_G10COSMOSCatv05_Z_USE_1_2_COSMOS2015_Laigle+_v1.1_optical_nir_magnitudes_larger_90.fits')[1].data
+#Load the data and reshape it in the form we want
+print('Openining the data files')
+fdata_1 = fits.open('Data/KOA_c3r2_v2_COSMOS2015_Laigle+_v1.1_optical_nir_magnitudes_larger_90_no_doubles_G10COSMOSCatv05-COSMOS2015.fits')[1].data
+fdata_2 = fits.open('Data/G10COSMOSCatv05_Z_USE_1_2_COSMOS2015_Laigle+_v1.1_optical_nir_magnitudes_larger_90_no_doubles_C3R2.fits')[1].data
+fdata_3 = fits.open('Data/KOA_c3r2_v2_COSMOS2015_Laigle+_v1.1_optical_nir_magnitudes_larger_90_doubles_G10COSMOSCatv05-COSMOS2015.fits')[1].data
 print('File is open')
 
-u_1, B_1, V_1, r_1, ip_1, zpp_1 = fdata['u_MAG_AUTO_1'], fdata['B_MAG_AUTO_1'], fdata['V_MAG_AUTO_1'], fdata['r_MAG_AUTO_1'], fdata['ip_MAG_AUTO_1'], fdata['zpp_MAG_AUTO_1']
-Y_1, J_1, H_1, Ks_1 = fdata['Y_MAG_AUTO_1'], fdata['J_MAG_AUTO_1'], fdata['H_MAG_AUTO_1'], fdata['Ks_MAG_AUTO_1']
-ch1_1, ch2_1, ch3_1, ch4_1 = fdata['SPLASH_1_MAG_1'], fdata['SPLASH_2_MAG_1'], fdata['SPLASH_3_MAG_1'], fdata['SPLASH_4_MAG_1']
+u, B, V, r, ip, zpp = fdata_1['u_MAG_AUTO'], fdata_1['B_MAG_AUTO'], fdata_1['V_MAG_AUTO'], fdata_1['r_MAG_AUTO'], fdata_1['ip_MAG_AUTO'], fdata_1['zpp_MAG_AUTO']
+Y, J, H, Ks = fdata_1['Y_MAG_AUTO'], fdata_1['J_MAG_AUTO'], fdata_1['H_MAG_AUTO'], fdata_1['Ks_MAG_AUTO']
+ch1, ch2, ch3, ch4 = fdata_1['SPLASH_1_MAG'], fdata_1['SPLASH_2_MAG'], fdata_1['SPLASH_3_MAG'], fdata_1['SPLASH_4_MAG']
 
-zphoto_1, mass_1, SSFR_1, age_1 = fdata['PHOTOZ_1'], fdata['MASS_MED_1'], fdata['SSFR_MED_1'], fdata['AGE_1']
-source_type_1 = fdata['type_1']
+zphoto, mass, SSFR, age = fdata_1['PHOTOZ'], fdata_1['MASS_MED'], fdata_1['SSFR_MED'], fdata_1['AGE']
+source_type = fdata_1['type']
 
-Z_C3R2 = fdata['Redshift']
+Z_C3R2 = fdata_1['Redshift']
 
-u_2, B_2, V_2, r_2, ip_2, zpp_2 = fdata['u_MAG_AUTO_2'], fdata['B_MAG_AUTO_2'], fdata['V_MAG_AUTO_2'], fdata['r_MAG_AUTO_2'], fdata['ip_MAG_AUTO_2'], fdata['zpp_MAG_AUTO_2']
-Y_2, J_2, H_2, Ks_2 = fdata['Y_MAG_AUTO_2'], fdata['J_MAG_AUTO_2'], fdata['H_MAG_AUTO_2'], fdata['Ks_MAG_AUTO_2']
-ch1_2, ch2_2, ch3_2, ch4_2 = fdata['SPLASH_2_MAG_2'], fdata['SPLASH_2_MAG_2'], fdata['SPLASH_3_MAG_2'], fdata['SPLASH_4_MAG_2']
+u, B, V = np.append(u,fdata_2['u_MAG_AUTO']), np.append(B,fdata_2['B_MAG_AUTO']), np.append(V,fdata_2['V_MAG_AUTO'])
+r, ip, zpp = np.append(r,fdata_2['r_MAG_AUTO']), np.append(ip,fdata_2['ip_MAG_AUTO']), np.append(zpp,fdata_2['zpp_MAG_AUTO'])
+Y, J, H, Ks = np.append(Y,fdata_2['Y_MAG_AUTO']), np.append(J,fdata_2['J_MAG_AUTO']), np.append(H,fdata_2['H_MAG_AUTO']), np.append(Ks,fdata_2['Ks_MAG_AUTO'])
+ch1, ch2, ch3, ch4 = np.append(ch1,fdata_2['SPLASH_1_MAG']), np.append(ch2,fdata_2['SPLASH_2_MAG']), np.append(ch3,fdata_2['SPLASH_3_MAG']), np.append(ch4,fdata_2['SPLASH_4_MAG'])
 
-zphoto_2, mass_2, SSFR_2, age_2 = fdata['PHOTOZ_2'], fdata['MASS_MED_2'], fdata['SSFR_MED_2'], fdata['AGE_2']
-source_type_2 = fdata['type_2']
+zphoto, mass, SSFR, age = np.append(zphoto,fdata_2['PHOTOZ']), np.append(mass,fdata_2['MASS_MED']), np.append(SSFR,fdata_2['SSFR_MED']), np.append(age,fdata_2['AGE'])
+source_type = np.append(source_type,fdata_2['type'])
 
-Z_G10Cosmos = fdata['Z_BEST']
-Z_GEN = fdata['Z_GEN']
-Z_USE = fdata['Z_USE']
+Z_G10COSMOS = fdata_2['Z_BEST']
+Z_GEN = fdata_2['Z_GEN']
+Z_USE = fdata_2['Z_USE']
 
-u_B_1, B_V_1, V_r_1, r_ip_1, ip_zpp_1, zpp_Y_1, Y_J_1, J_H_1, H_Ks_1 = u_1-B_1, B_1-V_1, V_1-r_1, r_1-ip_1, ip_1-zpp_1, zpp_1-Y_1, Y_1-J_1, J_1-H_1, H_1-Ks_1
-u_B_2, B_V_2, V_r_2, r_ip_2, ip_zpp_2, zpp_Y_2, Y_J_2, J_H_2, H_Ks_2 = u_2-B_2, B_2-V_2, V_2-r_2, r_2-ip_2, ip_2-zpp_2, zpp_2-Y_2, Y_2-J_2, J_2-H_2, H_2-Ks_2
+u, B, V = np.append(u,fdata_3['u_MAG_AUTO_1']), np.append(B,fdata_3['B_MAG_AUTO_1']), np.append(V,fdata_3['V_MAG_AUTO_1'])
+r, ip, zpp = np.append(r,fdata_3['r_MAG_AUTO_1']), np.append(ip,fdata_3['ip_MAG_AUTO_1']), np.append(zpp,fdata_3['zpp_MAG_AUTO_1'])
+Y, J, H, Ks = np.append(Y,fdata_3['Y_MAG_AUTO_1']), np.append(J,fdata_3['J_MAG_AUTO_1']), np.append(H,fdata_3['H_MAG_AUTO_1']), np.append(Ks,fdata_3['Ks_MAG_AUTO_1'])
+ch1, ch2, ch3, ch4 = np.append(ch1,fdata_3['SPLASH_1_MAG_1']), np.append(ch2,fdata_3['SPLASH_2_MAG_1']), np.append(ch3,fdata_3['SPLASH_3_MAG_1']), np.append(ch4,fdata_3['SPLASH_4_MAG_1'])
 
-#Continue weaving these two different data (_1 and _2) into one thing
+zphoto, mass, SSFR, age = np.append(zphoto,fdata_3['PHOTOZ_1']), np.append(mass,fdata_3['MASS_MED_1']), np.append(SSFR,fdata_3['SSFR_MED_1']), np.append(age,fdata_3['AGE_1'])
+source_type = np.append(source_type,fdata_3['type_1'])
 
-X = np.array([u, u_B, B_V, V_r, r_ip, ip_zpp, zpp_yHSC, yHSC_Y, Y_J, J_H, H_Ks])#, ch1, ch2])#, ch3, ch4]) ch3 and ch4 have many errors
+Z_C3R2_doubles = fdata_3['Redshift']
+Z_G10COSMOS_doubles = fdata_3['Z_BEST']
+Z_GEN_doubles = fdata_3['Z_GEN']
+Z_USE_doubles = fdata_3['Z_USE']
+
+Z_spec = np.append(Z_C3R2, Z_G10COSMOS)
+Z_spec = np.append(Z_spec, Z_C3R2_doubles)
+
+#Some interesting lines to analyze the data
+np.abs(Z_G10COSMOS_doubles-Z_C3R2_doubles)>0.1
+source_type[source_type!=0]
+
+u_B, B_V, V_r, r_ip, ip_zpp, zpp_Y, Y_J, J_H, H_Ks = u-B, B-V, V-r, r-ip, ip-zpp, zpp-Y, Y-J, J-H, H-Ks
+
+X = np.array([u, u_B, B_V, V_r, r_ip, ip_zpp, zpp_Y, Y_J, J_H, H_Ks])#, ch1, ch2])#, ch3, ch4]) ch3 and ch4 have many errors
 X = X.transpose() #This ensures that each array entry are the colors/magnitudes of a galaxy
+
+"""
+def change_numbers(in_c):
+    out_c = np.zeros(len(in_c))
+    for i in range(len(in_c)):
+        if in_c[i] == -9:
+            out_c[i] = -8
+        elif in_c[i] == 2:
+            out_c[i] = -4
+        else:
+            out_c[i] = in_c[i]
+    return out_c
+
+def change_numbers_2(in_c):
+    out_c = np.zeros(len(in_c))
+    for i in range(len(in_c)):
+        if in_c[i] == -9:
+            out_c[i] = 3
+        else:
+            out_c[i] = in_c[i]
+    return out_c
+
+new_source_type = change_numbers(source_type)
+new_source_type_2 = change_numbers_2(source_type)
+"""
+
+"""
+#Remove problematic galaxies
+#It turns out that 16% of galaxies with Z_BEST > 1.4 are bad galaxies and only 0.6% of galaxies with Z_BEST <= 1.4 are considered bad galaxies
+good_indices = np.argwhere((np.abs(mass)<90) & (np.abs(SSFR)<90) & (age>100)).flatten()
+bad_indices = np.argwhere((np.abs(mass)>=90) | (np.abs(SSFR)>=90) | (age<=100)).flatten()
+
+X, mass, SSFR, age = X[good_indices], mass[good_indices], SSFR[good_indices], age[good_indices]
 
 #Shuffle data and build training and test set
 permuted_indices = np.random.permutation(len(X))
@@ -54,29 +106,19 @@ Z_USE_perm = Z_USE[permuted_indices]
 mass_perm = mass[permuted_indices]
 SSFR_perm = SSFR[permuted_indices]
 age_perm = age[permuted_indices]
-
-#Remove problematic galaxies
-#It turns out that 16% of galaxies with Z_BEST > 1.4 are bad galaxies and only 0.6% of galaxies with Z_BEST <= 1.4 are considered bad galaxies
-good_indices = np.argwhere((np.abs(mass_perm)<90) & (np.abs(SSFR_perm)<90) & (age_perm>100)).flatten()
-bad_indices = np.argwhere((np.abs(mass_perm)>=90) | (np.abs(SSFR_perm)>=90) | (age_perm<=100)).flatten()
-
-X_perm = X_perm[good_indices]
-Z_BEST_perm = Z_BEST_perm[good_indices]
-Z_GEN_perm = Z_GEN[good_indices]
-Z_USE_perm = Z_USE[good_indices]
-mass_perm = mass_perm[good_indices]
-SSFR_perm = SSFR_perm[good_indices]
-age_perm = age_perm[good_indices]
+"""
 
 #Build an instance of the UMAP algorithm class and use it on the dataset
 reducer = umap.UMAP()
-embedding = reducer.fit_transform(X_perm)
+embedding = reducer.fit_transform(X)
 
-"""
 #Selecting the outliers
-def outlier(x, y, eps, zspec_min):
-    return np.argwhere((np.abs(embedding[:,0]-x)<eps) & (np.abs(embedding[:,1]-y)<eps) & (zspec_perm>zspec_min)).flatten()
-
+def outlier(x, y, eps, zspec_bound, minimum=True):
+    if minimum:
+        return np.argwhere((np.abs(embedding[:,0]-x)<eps) & (np.abs(embedding[:,1]-y)<eps) & (Z_spec>zspec_bound)).flatten()
+    else:
+        return np.argwhere((np.abs(embedding[:,0]-x)<eps) & (np.abs(embedding[:,1]-y)<eps) & (Z_spec<=zspec_bound)).flatten()
+    
 #Select the indices of the 'normal' data around the outlier
 def orbiter(outlier_index, eps, zspec_max):
     return np.argwhere((np.abs(embedding[:,0]-embedding[:,0][outliers[outlier_index]])<eps) & (np.abs(embedding[:,1]-embedding[:,1][outliers[outlier_index]])<eps) & (zspec_perm<zspec_max)).flatten()
@@ -93,12 +135,12 @@ data_normal_orbiters.write("COSMOSadaptdepth_ugriZYJHKs_rot_photoz_x_G10CosmosCa
 #og_outliers = permuted_indices[outliers]
 #data_outliers = fdata[og_outliers]
 #data_outliers.write("COSMOSadaptdepth_ugriZYJHKs_rot_photoz_x_G10CosmosCatv04_plus_observed_targets_09October2012_removed_magnitudes_larger_90_outliers.fits",format='fits')
-"""
+
 
 #Split the dataset into two different groups
-split = -10#np.mean(SSFR_perm)-np.var(SSFR_perm)**0.5
-split_a = SSFR_perm<split
-split_b = SSFR_perm>=split
+split = 0.93#np.mean(Z_spec)+np.var(Z_spec)**0.5
+split_a = Z_spec<split
+split_b = Z_spec>=split
 
 #visualize the distribution of galaxies in the compressed feature space
 fig, axs = plt.subplots()
@@ -109,10 +151,30 @@ for i in range(len(outliers)):
 """
 
 #x,y coordinates and the size of the dot and whether to use a logscale for the colors
-#CSa = axs.scatter(embedding[:, 0][split_a], embedding[:, 1][split_a], 5, c=SSFR_perm[split_a], cmap='summer')#, norm=matplotlib.colors.LogNorm())
-#cbara = fig.colorbar(CSa)
-CSb = axs.scatter(embedding[:, 0][split_b], embedding[:, 1][split_b], 5, c=SSFR_perm[split_b], cmap='autumn_r')#, norm=matplotlib.colors.LogNorm())
+CSa = axs.scatter(embedding[:, 0][(source_type == 0) & (Z_spec<0.93)], embedding[:, 1][(source_type == 0) & (Z_spec<0.93)], s=1, c=Z_spec[(source_type == 0) & (Z_spec<0.93)], cmap='summer', norm=matplotlib.colors.LogNorm(vmin=0.01, vmax=split))
+cbara = fig.colorbar(CSa)
+CSb = axs.scatter(embedding[:, 0][(source_type == 0) & (Z_spec>=0.93)], embedding[:, 1][(source_type == 0) & (Z_spec>=0.93)], 1, c=Z_spec[(source_type == 0) & (Z_spec>=0.93)], cmap='autumn_r', norm=matplotlib.colors.LogNorm(vmin=split, vmax=np.max(Z_spec)))
 cbarb = fig.colorbar(CSb)
-#cbara.set_label('SSFR < -10')
-cbarb.set_label('-10 <= SSFR')
+axs.text(5,8, 'Source_type == 0')
+cbara.set_label('Z_spec < 0.93')
+cbarb.set_label('0.93 <= Z_spec')
+axs.set_xlim([-9.75,8.8])
+axs.set_ylim([-10.4,8.7])
 plt.show()
+
+"""
+#Object type map
+fig, axs = plt.subplots()
+custom_cmap = plt.cm.get_cmap('jet', 4)#
+
+#x,y coordinates and the size of the dot and whether to use a logscale for the colors
+CSa = axs.scatter(embedding[:, 0], embedding[:, 1], s=[new_source_type_2[i]+0.1 for i in range(len(new_source_type_2))], c=new_source_type_2, cmap=custom_cmap)#, norm=matplotlib.colors.LogNorm(vmin=0.01, vmax=split))
+cbara = fig.colorbar(CSa)
+#CSb = axs.scatter(embedding[:, 0][split_b], embedding[:, 1][split_b], 1, c=Z_spec[split_b], cmap='autumn_r', norm=matplotlib.colors.LogNorm(vmin=split, vmax=np.max(Z_spec)))
+#cbarb = fig.colorbar(CSb)
+cbara.set_label('Type')
+cbara.set_ticks([0.375, 1.5-0.375, 1.5+0.375, 1.5+3*0.375])
+cbara.set_ticklabels(['Galaxies', 'Stars', 'X-ray sources', 'No-fit'])
+#cbarb.set_label('0.93 <= Z_spec')
+plt.show()
+"""

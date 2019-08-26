@@ -112,50 +112,50 @@ age_perm = age[permuted_indices]
 reducer = umap.UMAP()
 embedding = reducer.fit_transform(X)
 
-#Selecting the outliers
-def outlier(x, y, eps, zspec_bound, minimum=True):
-    if minimum:
-        return np.argwhere((np.abs(embedding[:,0]-x)<eps) & (np.abs(embedding[:,1]-y)<eps) & (Z_spec>zspec_bound)).flatten()
-    else:
-        return np.argwhere((np.abs(embedding[:,0]-x)<eps) & (np.abs(embedding[:,1]-y)<eps) & (Z_spec<=zspec_bound)).flatten()
-    
-#Select the indices of the 'normal' data around the outlier
-def orbiter(outlier_index, eps, zspec_max):
-    return np.argwhere((np.abs(embedding[:,0]-embedding[:,0][outliers[outlier_index]])<eps) & (np.abs(embedding[:,1]-embedding[:,1][outliers[outlier_index]])<eps) & (zspec_perm<zspec_max)).flatten()
+def indices_neighbors(center_index, eps):
+    arr = np.argwhere(np.linalg.norm(embedding[source_type==0]-embedding[source_type==0][center_index], axis=1)<eps).flatten()
+    return arr[arr!=center_index] #only return the neighbours, not the index itself
 
-outliers = np.array([outlier(7.2,-2.0,0.2,2)[0], outlier(3.3,-7.3,0.2,1.5)[0], outlier(-6.3,1.3,0.2,2.5)[0], outlier(2.2,-0.4,0.2,2.5)[0], outlier(9.2,-0.4,0.2,1.5)[0], outlier(6.14,-7.01,0.2,2)[0], outlier(2.55,-1.23,0.2,2)[0], outlier(-3.47,0.37,0.2,2)[0]])
-normal_orbiters = np.array([orbiter(0,0.07,split), orbiter(1,0.07,split), orbiter(2,0.1,split), orbiter(3,0.05,split), orbiter(4,0.0521,split), orbiter(5,0.084,split), orbiter(6,0.1,split), orbiter(7,0.1,split)])
-normal_orbiters = normal_orbiters.flatten()
+def z_umap_local_deviation(index):
+    z_local_avg = np.mean(Z_spec[source_type==0][indices_neighbors(index, 0.3)])
+    deviation = np.abs(Z_spec[source_type==0][index] - z_local_avg)
+    return deviation
 
-og_normal_orbiters = permuted_indices[normal_orbiters]
-data_normal_orbiters = fdata[og_normal_orbiters]
-data_normal_orbiters.write("COSMOSadaptdepth_ugriZYJHKs_rot_photoz_x_G10CosmosCatv04_plus_observed_targets_09October2012_removed_magnitudes_larger_90_normal_orbiters.fits",format='fits')
+num_neighbors = np.array([len(indices_neighbors(i,0.3)) for i in range(len(embedding[source_type==0]))])
+deviation = np.array([z_umap_local_deviation(i) for i in range(len(embedding[source_type==0]))])
 
-#Changing the indices from the permuted array to the original array and then selecting these from the original data and writing to a file
-#og_outliers = permuted_indices[outliers]
-#data_outliers = fdata[og_outliers]
-#data_outliers.write("COSMOSadaptdepth_ugriZYJHKs_rot_photoz_x_G10CosmosCatv04_plus_observed_targets_09October2012_removed_magnitudes_larger_90_outliers.fits",format='fits')
+outlier_criterium = 2
+outlier_indices = np.array([i for i in range(len(embedding[source_type==0])) if ((deviation[i]>=outlier_criterium)&(num_neighbors[i]>10))])
 
+orbiter_indices = [indices_neighbors(outlier_indices[i],0.3) for i in range(len(outlier_indices))]
+orbiter_indices_flat = np.concatenate(orbiter_indices).ravel()
+
+"""
+#Figure out how to get the data for the indices. Remember there are three separate files
+data_orbiters = fdata[og_normal_orbiters]
+data_orbiters.write("_orbiters.fits",format='fits')
+
+data_outliers = fdata[og_outliers]
+data_outliers.write("_outliers.fits",format='fits')
+"""
 
 #Split the dataset into two different groups
 split = 0.93#np.mean(Z_spec)+np.var(Z_spec)**0.5
-split_a = Z_spec<split
-split_b = Z_spec>=split
+split_a = Z_spec[source_type==0][np.append(outlier_indices,orbiter_indices_flat)]<split
+split_b = Z_spec[source_type==0][np.append(outlier_indices,orbiter_indices_flat)]>=split
 
 #visualize the distribution of galaxies in the compressed feature space
 fig, axs = plt.subplots()
 
-"""
-for i in range(len(outliers)):
-    axs.text(embedding[:,0][outliers[i]], embedding[:,1][outliers[i]], str(i+1), color = 'k')
-"""
+for i in range(len(outlier_indices)):
+    axs.text(embedding[:,0][source_type == 0][outlier_indices[i]], embedding[:,1][source_type == 0][outlier_indices[i]], str(i+1), color = 'k')
 
 #x,y coordinates and the size of the dot and whether to use a logscale for the colors
-CSa = axs.scatter(embedding[:, 0][(source_type == 0) & (Z_spec<0.93)], embedding[:, 1][(source_type == 0) & (Z_spec<0.93)], s=1, c=Z_spec[(source_type == 0) & (Z_spec<0.93)], cmap='summer', norm=matplotlib.colors.LogNorm(vmin=0.01, vmax=split))
+CSa = axs.scatter(embedding[:, 0][source_type==0][np.append(outlier_indices,orbiter_indices_flat)][split_a], embedding[:, 1][source_type==0][np.append(outlier_indices,orbiter_indices_flat)][split_a], s=1, c=Z_spec[source_type==0][np.append(outlier_indices,orbiter_indices_flat)][split_a], cmap='summer', norm=matplotlib.colors.LogNorm(vmin=0.01, vmax=split))
 cbara = fig.colorbar(CSa)
-CSb = axs.scatter(embedding[:, 0][(source_type == 0) & (Z_spec>=0.93)], embedding[:, 1][(source_type == 0) & (Z_spec>=0.93)], 1, c=Z_spec[(source_type == 0) & (Z_spec>=0.93)], cmap='autumn_r', norm=matplotlib.colors.LogNorm(vmin=split, vmax=np.max(Z_spec)))
+CSb = axs.scatter(embedding[:, 0][source_type==0][np.append(outlier_indices,orbiter_indices_flat)][split_b], embedding[:, 1][source_type==0][np.append(outlier_indices,orbiter_indices_flat)][split_b], s=1, c=Z_spec[source_type==0][np.append(outlier_indices,orbiter_indices_flat)][split_b], cmap='autumn_r', norm=matplotlib.colors.LogNorm(vmin=split, vmax=np.max(Z_spec)))
 cbarb = fig.colorbar(CSb)
-axs.text(5,8, 'Source_type == 0')
+axs.text(2.5,8, 'Source_type == 0, outliers & neighbors')
 cbara.set_label('Z_spec < 0.93')
 cbarb.set_label('0.93 <= Z_spec')
 axs.set_xlim([-9.75,8.8])

@@ -12,6 +12,7 @@ from astropy.table import Table
 #from datashader import transfer_functions as tf
 from matplotlib import cm
 #from datashader.bokeh_ext import InteractiveImage
+import matplotlib.gridspec as gridspec
 
 #import bokeh.plotting as bp
 from sklearn.model_selection import train_test_split, cross_val_score
@@ -31,6 +32,8 @@ ch1, ch2, ch3, ch4 = fdata['SPLASH_1_MAG'], fdata['SPLASH_2_MAG'], fdata['SPLASH
 
 zphoto, mass, SSFR, age = fdata['PHOTOZ'], fdata['MASS_MED'], fdata['SSFR_MED'], fdata['AGE']
 source_type = fdata['type']
+
+#mass_med_min68, mass_med_max68 = fdata['MASS_MED_MIN68'], fdata['MASS_MED_MAX68']
 
 u_B, B_V, V_r, r_ip, ip_zpp, zpp_Y, Y_J, J_H, H_Ks = u-B, B-V, V-r, r-ip, ip-zpp, zpp-Y, Y-J, J-H, H-Ks
 
@@ -64,15 +67,15 @@ def rmse(predictions, targets):
     return np.sqrt(((predictions - targets) ** 2).mean())
 
 #Training knn regressor for redshift on both the embedded data as well as the original data
-neigh = [KNeighborsRegressor(n_neighbors=i, weights='distance').fit(train_embedding_bin, zphoto_train_bin) for i in range(1,100)]
-zphoto_test_pred = [neigh[i].predict(test_embedding_bin) for i in range(len(neigh))]
-score_pred = [neigh[i].score(test_embedding_bin, zphoto_test_bin) for i in range(len(neigh))]
-rmse_pred = [rmse(zphoto_test_pred[i], zphoto_test_bin) for i in range(len(zphoto_test_pred))]
+neigh = [KNeighborsRegressor(n_neighbors=i, weights='distance').fit(train_embedding_bin, mass_train_bin) for i in range(1,100)]
+mass_test_pred = [neigh[i].predict(test_embedding_bin) for i in range(len(neigh))]
+score_pred = [neigh[i].score(test_embedding_bin, mass_test_bin) for i in range(len(neigh))]
+rmse_pred = [rmse(mass_test_pred[i], mass_test_bin) for i in range(len(mass_test_pred))]
 
-neigh2 = [KNeighborsRegressor(n_neighbors=i, weights='distance').fit(X_train_bin, zphoto_train_bin) for i in range(1,15)]
-zphoto_test_pred_2 = [neigh2[i].predict(X_test_bin) for i in range(len(neigh2))]
-score_pred_2 = [neigh2[i].score(X_test_bin, zphoto_test_bin) for i in range(len(neigh2))]
-rmse_pred_2 = [rmse(zphoto_test_pred_2[i], zphoto_test_bin) for i in range(len(zphoto_test_pred_2))]
+neigh2 = [KNeighborsRegressor(n_neighbors=i, weights='distance').fit(X_train_bin, mass_train_bin) for i in range(1,15)]
+mass_test_pred_2 = [neigh2[i].predict(X_test_bin) for i in range(len(neigh2))]
+score_pred_2 = [neigh2[i].score(X_test_bin, mass_test_bin) for i in range(len(neigh2))]
+rmse_pred_2 = [rmse(mass_test_pred_2[i], mass_test_bin) for i in range(len(mass_test_pred_2))]
 
 """
 plt.plot([i+1 for i in range(len(rmse_pred))], rmse_pred)
@@ -83,15 +86,15 @@ plt.show()
 """
 
 #Training support vector regressor for redshift on both the embedded data as well as the original data
-svr1 = SVR().fit(train_embedding_bin, zphoto_train_bin)
-zphoto_test_pred_3 = svr1.predict(test_embedding_bin)
-score_pred_3 = svr1.score(test_embedding_bin, zphoto_test_bin)
-rmse_pred_3 = rmse(zphoto_test_pred_3, zphoto_test_bin)
+svr1 = SVR().fit(train_embedding_bin, mass_train_bin)
+mass_test_pred_3 = svr1.predict(test_embedding_bin)
+score_pred_3 = svr1.score(test_embedding_bin, mass_test_bin)
+rmse_pred_3 = rmse(mass_test_pred_3, mass_test_bin)
 
-svr2 = SVR().fit(X_train_bin, zphoto_train_bin)
-zphoto_test_pred_4 = svr2.predict(X_test_bin)
-score_pred_4 = svr2.score(X_test_bin, zphoto_test_bin)
-rmse_pred_4 = rmse(zphoto_test_pred_4, zphoto_test_bin)
+svr2 = SVR().fit(X_train_bin, mass_train_bin)
+mass_test_pred_4 = svr2.predict(X_test_bin)
+score_pred_4 = svr2.score(X_test_bin, mass_test_bin)
+rmse_pred_4 = rmse(mass_test_pred_4, mass_test_bin)
 
 """
 #All the code of my attempts to make nicer plots with datashader
@@ -116,6 +119,39 @@ bp.output_notebook()
 p = bp.figure(tools='pan,wheel_zoom,reset', x_range=(-6.5,10.25), y_range=(-10.5,10.5), plot_width=500, plot_height=500)
 
 InteractiveImage(p, image_callback)
+"""
+"""
+#Hexbin scatter plot of M_pred vs M_true (SED-fit)
+fig = plt.figure(num=None, figsize=(8, 8), dpi=80, facecolor='w', edgecolor='k')
+gs = gridspec.GridSpec(2, 1, height_ratios=[4,1], hspace=0.03) 
+
+ax0 = plt.subplot(gs[0])
+hb = ax0.hexbin(mass_test_bin,mass_test_pred_2[9],vmin=1, gridsize=100, bins='log', cmap='plasma')
+cb = fig.colorbar(hb, ax=ax0)
+cb.set_label('N')
+ax0.set_ylabel(r'$\rm Log\ (M_{*}/M_{\odot}) \ knn-10 \ Input \ Space$',fontsize=20)
+ax0.plot([4,12],[4,12],'k--',linewidth=1)
+ax0.set_xlim([7,np.max(mass_test_bin)])
+ax0.set_ylim([7,np.max(mass_test_bin)])
+ax0.text(10.2,7.7,r'$\rm 0.7<z<0.9$',size=15,color='k')
+ax0.axes.get_xaxis().set_ticks([])
+plt.tick_params(axis='both', which='major', labelsize=13)
+
+ax2 = plt.subplot(gs[1])
+ax2.set_xlabel(r'$\rm Log\ (M_{*}/M_{\odot})\ COSMOS\ SEDfit$',fontsize=20, labelpad=10)
+ax2.set_ylabel(r'$\rm \Delta \ Log(M)$',fontsize=20,labelpad=10)
+ax2.set_ylim([-0.5,0.5])
+hb=ax2.hexbin(mass_test_bin,mass_test_bin-mass_test_pred_2[9],vmin=1, gridsize=100, bins='log', cmap='plasma')
+cb = fig.colorbar(hb, ax=ax2)
+cb.set_label('N')
+ax2.plot([6,12],[0,0],'k--')
+ax2.set_xlim([7,np.max(mass_test_bin)])
+ax2.set_ylim([-1.,1.])
+ax2.yaxis.set_ticks([-1.0,-0.5,0.,0.5,1.0])
+plt.tick_params(axis='both', which='major', labelsize=13)
+
+plt.tight_layout()
+plt.show()
 """
 
 #Split the dataset into two different groups

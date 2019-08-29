@@ -116,19 +116,32 @@ def indices_neighbors(center_index, eps):
     arr = np.argwhere(np.linalg.norm(embedding[source_type==0]-embedding[source_type==0][center_index], axis=1)<eps).flatten()
     return arr[arr!=center_index] #only return the neighbours, not the index itself
 
-def z_umap_local_deviation(index):
-    z_local_avg = np.mean(Z_spec[source_type==0][indices_neighbors(index, 0.3)])
-    deviation = np.abs(Z_spec[source_type==0][index] - z_local_avg)
+def z_umap_local_deviation(index, method=1):
+    index_neighbors = indices_neighbors(index, 0.3)
+    z_local_avg = np.mean(Z_spec[source_type==0][index_neighbors])
+    if len(index_neighbors)<2:
+        return 0.1
+    elif method==1:
+        deviation = np.abs(Z_spec[source_type==0][index] - z_local_avg)
+    elif method==2:
+        deviation = np.abs(Z_spec[source_type==0][index] - z_local_avg)/np.var(Z_spec[source_type==0][index_neighbors])
     return deviation
 
 num_neighbors = np.array([len(indices_neighbors(i,0.3)) for i in range(len(embedding[source_type==0]))])
 deviation = np.array([z_umap_local_deviation(i) for i in range(len(embedding[source_type==0]))])
+weighted_deviation = np.array([z_umap_local_deviation(i,method=2) for i in range(len(embedding[source_type==0]))])
 
 outlier_criterium = 2
 outlier_indices = np.array([i for i in range(len(embedding[source_type==0])) if ((deviation[i]>=outlier_criterium)&(num_neighbors[i]>10))])
 
 orbiter_indices = [indices_neighbors(outlier_indices[i],0.3) for i in range(len(outlier_indices))]
 orbiter_indices_flat = np.concatenate(orbiter_indices).ravel()
+
+outlier2_criterium = 200
+outlier2_indices = np.array([i for i in range(len(embedding[source_type==0])) if ((weighted_deviation[i]>=outlier2_criterium)&(num_neighbors[i]>10))])
+
+orbiter2_indices = [indices_neighbors(outlier2_indices[i],0.3) for i in range(len(outlier2_indices))]
+orbiter2_indices_flat = np.concatenate(orbiter2_indices).ravel()
 
 """
 #Figure out how to get the data for the indices. Remember there are three separate files
@@ -141,19 +154,40 @@ data_outliers.write("_outliers.fits",format='fits')
 
 #Split the dataset into two different groups
 split = 0.93#np.mean(Z_spec)+np.var(Z_spec)**0.5
-split_a = Z_spec[source_type==0][np.append(outlier_indices,orbiter_indices_flat)]<split
-split_b = Z_spec[source_type==0][np.append(outlier_indices,orbiter_indices_flat)]>=split
+split_a = np.argwhere(Z_spec[source_type==0]<split).flatten()
+split_b = np.argwhere(Z_spec[source_type==0]>=split).flatten()
 
 #visualize the distribution of galaxies in the compressed feature space
 fig, axs = plt.subplots()
 
-for i in range(len(outlier_indices)):
-    axs.text(embedding[:,0][source_type == 0][outlier_indices[i]], embedding[:,1][source_type == 0][outlier_indices[i]], str(i+1), color = 'k')
+#x,y coordinates and the size of the dot and whether to use a logscale for the colors
+CSa = axs.scatter(embedding[:, 0][source_type==0][split_a], embedding[:, 1][source_type==0][split_a], s=[30 if np.any(i==outlier2_indices) else 1 for i in split_a], c=Z_spec[source_type==0][split_a], cmap='summer', norm=matplotlib.colors.LogNorm(vmin=0.01, vmax=split))
+cbara = fig.colorbar(CSa)
+CSb = axs.scatter(embedding[:, 0][source_type==0][split_b], embedding[:, 1][source_type==0][split_b], s=[30 if np.any(i==outlier2_indices) else 1 for i in split_b], c=Z_spec[source_type==0][split_b], cmap='autumn_r', norm=matplotlib.colors.LogNorm(vmin=split, vmax=np.max(Z_spec)))
+cbarb = fig.colorbar(CSb)
+axs.text(2.5,8, 'Source_type == 0, outliers')
+cbara.set_label('Z_spec < 0.93')
+cbarb.set_label('0.93 <= Z_spec')
+axs.set_xlim([-9.75,8.8])
+axs.set_ylim([-10.4,8.7])
+plt.show()
+
+"""
+#Split the dataset into two different groups
+split = 0.93#np.mean(Z_spec)+np.var(Z_spec)**0.5
+split_a = Z_spec[source_type==0][np.append(outlier2_indices,orbiter2_indices_flat)]<split
+split_b = Z_spec[source_type==0][np.append(outlier2_indices,orbiter2_indices_flat)]>=split
+
+#visualize the distribution of galaxies in the compressed feature space
+fig, axs = plt.subplots()
+
+for i in range(len(outlier2_indices)):
+    axs.text(embedding[:,0][source_type == 0][outlier2_indices[i]], embedding[:,1][source_type == 0][outlier2_indices[i]], str(i+1), color = 'k')
 
 #x,y coordinates and the size of the dot and whether to use a logscale for the colors
-CSa = axs.scatter(embedding[:, 0][source_type==0][np.append(outlier_indices,orbiter_indices_flat)][split_a], embedding[:, 1][source_type==0][np.append(outlier_indices,orbiter_indices_flat)][split_a], s=1, c=Z_spec[source_type==0][np.append(outlier_indices,orbiter_indices_flat)][split_a], cmap='summer', norm=matplotlib.colors.LogNorm(vmin=0.01, vmax=split))
+CSa = axs.scatter(embedding[:, 0][source_type==0][np.append(outlier2_indices,orbiter2_indices_flat)][split_a], embedding[:, 1][source_type==0][np.append(outlier2_indices,orbiter2_indices_flat)][split_a], s=1, c=Z_spec[source_type==0][np.append(outlier2_indices,orbiter2_indices_flat)][split_a], cmap='summer', norm=matplotlib.colors.LogNorm(vmin=0.01, vmax=split))
 cbara = fig.colorbar(CSa)
-CSb = axs.scatter(embedding[:, 0][source_type==0][np.append(outlier_indices,orbiter_indices_flat)][split_b], embedding[:, 1][source_type==0][np.append(outlier_indices,orbiter_indices_flat)][split_b], s=1, c=Z_spec[source_type==0][np.append(outlier_indices,orbiter_indices_flat)][split_b], cmap='autumn_r', norm=matplotlib.colors.LogNorm(vmin=split, vmax=np.max(Z_spec)))
+CSb = axs.scatter(embedding[:, 0][source_type==0][np.append(outlier2_indices,orbiter2_indices_flat)][split_b], embedding[:, 1][source_type==0][np.append(outlier2_indices,orbiter2_indices_flat)][split_b], s=1, c=Z_spec[source_type==0][np.append(outlier2_indices,orbiter2_indices_flat)][split_b], cmap='autumn_r', norm=matplotlib.colors.LogNorm(vmin=split, vmax=np.max(Z_spec)))
 cbarb = fig.colorbar(CSb)
 axs.text(2.5,8, 'Source_type == 0, outliers & neighbors')
 cbara.set_label('Z_spec < 0.93')
@@ -161,6 +195,7 @@ cbarb.set_label('0.93 <= Z_spec')
 axs.set_xlim([-9.75,8.8])
 axs.set_ylim([-10.4,8.7])
 plt.show()
+"""
 
 """
 #Object type map

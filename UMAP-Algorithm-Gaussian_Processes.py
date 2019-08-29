@@ -43,9 +43,11 @@ X, zphoto, mass, SSFR, age= X[good_indices], zphoto[good_indices], mass[good_ind
 X_train, X_test, zphoto_train, zphoto_test, mass_train, mass_test, SSFR_train, SSFR_test, age_train, age_test = train_test_split(X, zphoto, mass, SSFR, age)
 
 #Build an instance of the UMAP algorithm class and use it on the dataset
+print("Training UMAP on data")
 trans = umap.UMAP().fit(X_train)
 train_embedding = trans.embedding_
 test_embedding = trans.transform(X_test)
+print("Done Training UMAP on data")
 
 #Take data from bin out of UMAP
 binned_indices_train = np.argwhere((zphoto_train>=0.7) & (zphoto_train<0.9)).flatten()
@@ -67,7 +69,8 @@ x = train_embedding_bin
 x_pred = test_embedding_bin
 
 kernel = np.var(y) * kernels.ExpSquaredKernel(0.5, ndim=2)
-gp = george.GP(kernel)
+gp = george.GP(kernel, solver=george.HODLRSolver, seed=33)
+print("Computing GP on the binned data and extracting predictions for test locations")
 gp.compute(x)
 
 pred, pred_var = gp.predict(y, x_pred, return_var=True)
@@ -80,12 +83,14 @@ def grad_neg_ln_like(p):
     gp.set_parameter_vector(p)
     return -gp.grad_log_likelihood(y)
 
+print("Maximizing mariginal probabiliy by minimizing minus the marginal probability")
 result = minimize(neg_ln_like, gp.get_parameter_vector(), jac=grad_neg_ln_like)
 print(result)
 
 gp.set_parameter_vector(result.x)
 print("\nFinal ln-likelihood: {0:.2f}".format(gp.log_likelihood(y)))
 
+print("Extracting the predictions for GP on test locations for parameters that give max marginal probability")
 pred, pred_var = gp.predict(y, x_pred, return_var=True)
 
 """

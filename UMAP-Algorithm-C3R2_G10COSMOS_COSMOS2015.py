@@ -12,9 +12,13 @@ np.random.seed(33)
 
 #Load the data and reshape it in the form we want
 print('Openining the data files')
-fdata_1 = fits.open('Data/KOA_c3r2_v2_COSMOS2015_Laigle+_v1.1_optical_nir_magnitudes_larger_90_no_doubles_G10COSMOSCatv05-COSMOS2015.fits')[1].data
-fdata_2 = fits.open('Data/G10COSMOSCatv05_Z_USE_1_2_COSMOS2015_Laigle+_v1.1_optical_nir_magnitudes_larger_90_no_doubles_C3R2.fits')[1].data
-fdata_3 = fits.open('Data/KOA_c3r2_v2_COSMOS2015_Laigle+_v1.1_optical_nir_magnitudes_larger_90_doubles_G10COSMOSCatv05-COSMOS2015.fits')[1].data
+#fdata_1 = fits.open('Data/KOA_c3r2_v2_COSMOS2015_Laigle+_v1.1_optical_nir_magnitudes_larger_90_no_doubles_G10COSMOSCatv05-COSMOS2015.fits')[1].data
+#fdata_2 = fits.open('Data/G10COSMOSCatv05_Z_USE_1_2_COSMOS2015_Laigle+_v1.1_optical_nir_magnitudes_larger_90_no_doubles_C3R2.fits')[1].data
+#fdata_3 = fits.open('Data/KOA_c3r2_v2_COSMOS2015_Laigle+_v1.1_optical_nir_magnitudes_larger_90_doubles_G10COSMOSCatv05-COSMOS2015.fits')[1].data
+fdata_1 = Table.read('Data/KOA_c3r2_v2_COSMOS2015_Laigle+_v1.1_optical_nir_magnitudes_larger_90_no_doubles_G10COSMOSCatv05-COSMOS2015.fits',format='fits')
+fdata_2 = Table.read('Data/G10COSMOSCatv05_Z_USE_1_2_COSMOS2015_Laigle+_v1.1_optical_nir_magnitudes_larger_90_no_doubles_C3R2.fits',format='fits')
+fdata_3 = Table.read('Data/KOA_c3r2_v2_COSMOS2015_Laigle+_v1.1_optical_nir_magnitudes_larger_90_doubles_G10COSMOSCatv05-COSMOS2015.fits',format='fits')
+
 print('File is open')
 
 u, B, V, r, ip, zpp = fdata_1['u_MAG_AUTO'], fdata_1['B_MAG_AUTO'], fdata_1['V_MAG_AUTO'], fdata_1['r_MAG_AUTO'], fdata_1['ip_MAG_AUTO'], fdata_1['zpp_MAG_AUTO']
@@ -22,7 +26,7 @@ Y, J, H, Ks = fdata_1['Y_MAG_AUTO'], fdata_1['J_MAG_AUTO'], fdata_1['H_MAG_AUTO'
 ch1, ch2, ch3, ch4 = fdata_1['SPLASH_1_MAG'], fdata_1['SPLASH_2_MAG'], fdata_1['SPLASH_3_MAG'], fdata_1['SPLASH_4_MAG']
 
 zphoto, mass, SSFR, age = fdata_1['PHOTOZ'], fdata_1['MASS_MED'], fdata_1['SSFR_MED'], fdata_1['AGE']
-source_type = fdata_1['type']
+source_type = fdata_1['TYPE']
 
 Z_C3R2 = fdata_1['Redshift']
 
@@ -32,7 +36,7 @@ Y, J, H, Ks = np.append(Y,fdata_2['Y_MAG_AUTO']), np.append(J,fdata_2['J_MAG_AUT
 ch1, ch2, ch3, ch4 = np.append(ch1,fdata_2['SPLASH_1_MAG']), np.append(ch2,fdata_2['SPLASH_2_MAG']), np.append(ch3,fdata_2['SPLASH_3_MAG']), np.append(ch4,fdata_2['SPLASH_4_MAG'])
 
 zphoto, mass, SSFR, age = np.append(zphoto,fdata_2['PHOTOZ']), np.append(mass,fdata_2['MASS_MED']), np.append(SSFR,fdata_2['SSFR_MED']), np.append(age,fdata_2['AGE'])
-source_type = np.append(source_type,fdata_2['type'])
+source_type = np.append(source_type,fdata_2['TYPE'])
 
 Z_G10COSMOS = fdata_2['Z_BEST']
 Z_GEN = fdata_2['Z_GEN']
@@ -44,7 +48,7 @@ Y, J, H, Ks = np.append(Y,fdata_3['Y_MAG_AUTO_1']), np.append(J,fdata_3['J_MAG_A
 ch1, ch2, ch3, ch4 = np.append(ch1,fdata_3['SPLASH_1_MAG_1']), np.append(ch2,fdata_3['SPLASH_2_MAG_1']), np.append(ch3,fdata_3['SPLASH_3_MAG_1']), np.append(ch4,fdata_3['SPLASH_4_MAG_1'])
 
 zphoto, mass, SSFR, age = np.append(zphoto,fdata_3['PHOTOZ_1']), np.append(mass,fdata_3['MASS_MED_1']), np.append(SSFR,fdata_3['SSFR_MED_1']), np.append(age,fdata_3['AGE_1'])
-source_type = np.append(source_type,fdata_3['type_1'])
+source_type = np.append(source_type,fdata_3['TYPE_1'])
 
 Z_C3R2_doubles = fdata_3['Redshift']
 Z_G10COSMOS_doubles = fdata_3['Z_BEST']
@@ -143,13 +147,31 @@ outlier2_indices = np.array([i for i in range(len(embedding[source_type==0])) if
 orbiter2_indices = [indices_neighbors(outlier2_indices[i],0.3) for i in range(len(outlier2_indices))]
 orbiter2_indices_flat = np.concatenate(orbiter2_indices).ravel()
 
+def get_og_data_sourcetype0(indices_outliers):
+    indices_outliers_1 = np.array([])
+    indices_outliers_2 = np.array([])
+    indices_outliers_3 = np.array([])
+    
+    for index in indices_outliers:
+        if (0 <= index) & (index <= 2016):
+            indices_outliers_1 = np.append(indices_outliers_1, index)
+        
+        elif (index <= 24259):
+            indices_outliers_2 = np.append(indices_outliers_2, index-2017)
+        
+        elif (index <= 24546):
+            indices_outliers_3 = np.append(indices_outliers_3, index-24260)
+        
+    data_outliers_1 = fdata_1[fdata_1['TYPE']==0][indices_outliers_1.astype(int)]
+    data_outliers_2 = fdata_2[fdata_2['TYPE']==0][indices_outliers_2.astype(int)]
+    data_outliers_3 = fdata_3[fdata_3['TYPE_1']==0][indices_outliers_3.astype(int)]
+    data_outliers_1.write("Data/KOA_c3r2_v2_COSMOS2015_Laigle+_v1.1_optical_nir_magnitudes_larger_90_no_doubles_G10COSMOSCatv05-COSMOS2015_outliers.fits",format='fits')
+    data_outliers_2.write("Data/G10COSMOSCatv05_Z_USE_1_2_COSMOS2015_Laigle+_v1.1_optical_nir_magnitudes_larger_90_no_doubles_C3R2_outliers.fits",format='fits')
+    data_outliers_3.write("Data/KOA_c3r2_v2_COSMOS2015_Laigle+_v1.1_optical_nir_magnitudes_larger_90_doubles_G10COSMOSCatv05-COSMOS2015_outliers.fits",format='fits')
+
 """
-#Figure out how to get the data for the indices. Remember there are three separate files
 data_orbiters = fdata[og_normal_orbiters]
 data_orbiters.write("_orbiters.fits",format='fits')
-
-data_outliers = fdata[og_outliers]
-data_outliers.write("_outliers.fits",format='fits')
 """
 
 #Split the dataset into two different groups

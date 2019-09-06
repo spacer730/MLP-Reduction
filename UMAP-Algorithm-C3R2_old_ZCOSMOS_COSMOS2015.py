@@ -34,7 +34,7 @@ source_type = fdata_1['TYPE']
 
 Z_C3R2 = fdata_1['Redshift']
 
-X-ray_data_1 = fdata_1['']
+Xray_data1_indices = np.argwhere(np.array([len(fdata_1['name'][i]) for i in range(len(fdata_1))])>0).flatten()
 
 u, B, V = np.append(u,fdata_2['u_MAG_AUTO']), np.append(B,fdata_2['B_MAG_AUTO']), np.append(V,fdata_2['V_MAG_AUTO'])
 r, ip, zpp = np.append(r,fdata_2['r_MAG_AUTO']), np.append(ip,fdata_2['ip_MAG_AUTO']), np.append(zpp,fdata_2['zpp_MAG_AUTO'])
@@ -47,7 +47,7 @@ source_type = np.append(source_type,fdata_2['TYPE'])
 Z_OldZCOSMOS = fdata_2['zspec']
 Instr_OldZCOSMOS = fdata_2['Instr']
 
-X-ray_data_2 = fdata_2['']
+Xray_data2_indices = np.argwhere(np.array([len(fdata_2['name'][i]) for i in range(len(fdata_2))])>0).flatten()
 
 u, B, V = np.append(u,fdata_3['u_MAG_AUTO_1']), np.append(B,fdata_3['B_MAG_AUTO_1']), np.append(V,fdata_3['V_MAG_AUTO_1'])
 r, ip, zpp = np.append(r,fdata_3['r_MAG_AUTO_1']), np.append(ip,fdata_3['ip_MAG_AUTO_1']), np.append(zpp,fdata_3['zpp_MAG_AUTO_1'])
@@ -61,7 +61,14 @@ Z_C3R2_doubles = fdata_3['Redshift']
 Z_OldZCOSMOS_doubles = fdata_3['zspec']
 Instr_OldZCOSMOS_doubles = fdata_3['Instr']
 
-X-ray_data_3 = fdata_3['']
+Xray_data3_indices = np.argwhere(np.array([len(fdata_3['name_1'][i]) for i in range(len(fdata_3))])>0).flatten()
+
+CSC_Xray_indices = np.append(Xray_data1_indices, Xray_data2_indices+len(fdata_1))
+CSC_Xray_indices = np.append(CSC_Xray_indices, Xray_data3_indices+len(fdata_1)+len(fdata_2))
+
+COSMOS2015_Xray_indices = np.argwhere(source_type==2).flatten()
+union_indices = np.union1d(COSMOS2015_Xray_indices, Xray_indices)
+intersect_indices = np.intersect1d(COSMOS2015_Xray_indices, Xray_indices)
 
 Z_spec = np.append(Z_C3R2, Z_OldZCOSMOS)
 Z_spec = np.append(Z_spec, Z_C3R2_doubles)
@@ -69,6 +76,8 @@ Z_spec = np.append(Z_spec, Z_C3R2_doubles)
 #Some interesting lines to analyze the data
 np.abs(Z_OldZCOSMOS_doubles-Z_C3R2_doubles)>0.1
 source_type[source_type!=0]
+
+
 
 u_B, B_V, V_r, r_ip, ip_zpp, zpp_Y, Y_J, J_H, H_Ks = u-B, B-V, V-r, r-ip, ip-zpp, zpp-Y, Y-J, J-H, H-Ks
 
@@ -215,8 +224,8 @@ plt.show()
 #Shows whole projection with the outliers enlarged
 #Split the dataset into two different groups
 split = 1.47#np.mean(Z_spec)+np.var(Z_spec)**0.5
-split_a = np.argwhere(Z_spec[source_type==0]<split).flatten()
-split_b = np.argwhere(Z_spec[source_type==0]>=split).flatten()
+split_a = np.argwhere(Z_spec<split).flatten()
+split_b = np.argwhere(Z_spec>=split).flatten()
 
 #visualize the distribution of galaxies in the compressed feature space
 fig, axs = plt.subplots()
@@ -224,9 +233,9 @@ fig, axs = plt.subplots()
 #x,y coordinates and the size of the dot and whether to use a logscale for the colors
 my_cmap_1 = copy.copy(plt.cm.summer)
 my_cmap_1.set_bad(my_cmap_1(0))
-CSa = axs.scatter(embedding[:, 0][source_type==0][split_a], embedding[:, 1][source_type==0][split_a], s=[30 if np.any(i==outlier2_indices_stype_0) else 1 for i in split_a], c=Z_spec[source_type==0][split_a], cmap=my_cmap_1, norm=matplotlib.colors.LogNorm(vmin=0.01, vmax=split))
+CSa = axs.scatter(embedding[:, 0][split_a], embedding[:, 1][split_a], s=[30 if np.any(i==CSC_Xray_indices) else 1 for i in split_a], c=Z_spec[split_a], cmap=my_cmap_1, norm=matplotlib.colors.LogNorm(vmin=0.01, vmax=split))
 cbara = fig.colorbar(CSa)
-CSb = axs.scatter(embedding[:, 0][source_type==0][split_b], embedding[:, 1][source_type==0][split_b], s=[30 if np.any(i==outlier2_indices_stype_0) else 1 for i in split_b], c=Z_spec[source_type==0][split_b], cmap='autumn_r', norm=matplotlib.colors.LogNorm(vmin=split, vmax=np.max(Z_spec)))
+CSb = axs.scatter(embedding[:, 0][split_b], embedding[:, 1][split_b], s=[30 if np.any(i==CSC_Xray_indices) else 1 for i in split_b], c=Z_spec[split_b], cmap='autumn_r', norm=matplotlib.colors.LogNorm(vmin=split, vmax=np.max(Z_spec)))
 cbarb = fig.colorbar(CSb)
 #axs.text(2.5,8, 'Source_type == 0, outliers')
 cbara.set_label('Z_spec < 1.47')
@@ -272,19 +281,19 @@ def change_numbers(in_c):
             out_c[i] = in_c[i]
     return out_c
 
-new_source_type = change_numbers(source_type)
+#new_source_type = change_numbers(source_type)
+new_source_type = np.array([1 if np.any(i==CSC_Xray_indices) else 0 for i in range(len(Z_spec))])
 
 fig, axs = plt.subplots()
-custom_cmap = plt.cm.get_cmap('jet', 4)#
+custom_cmap = plt.cm.get_cmap('bwr', 2)#
 
 #x,y coordinates and the size of the dot and whether to use a logscale for the colors
-CSa = axs.scatter(embedding[:, 0][np.append(outlier_indices_stype_all,2198)], embedding[:, 1][np.append(outlier_indices_stype_all,2198)], s=np.array([0.5+5*new_source_type[i] for i in range(len(new_source_type))])[np.append(outlier_indices_stype_all,2198)], c=new_source_type[np.append(outlier_indices_stype_all,2198)], cmap=custom_cmap)#, norm=matplotlib.colors.LogNorm(vmin=0.01, vmax=split))
+CSa = axs.scatter(embedding[:, 0], embedding[:, 1], s=np.array([0.5+5*new_source_type[i] for i in range(len(new_source_type))]), c=new_source_type, cmap=custom_cmap)#, norm=matplotlib.colors.LogNorm(vmin=0.01, vmax=split))
 cbara = fig.colorbar(CSa)
 #CSb = axs.scatter(embedding[:, 0][split_b], embedding[:, 1][split_b], 1, c=Z_spec[split_b], cmap='autumn_r', norm=matplotlib.colors.LogNorm(vmin=split, vmax=np.max(Z_spec)))
 #cbarb = fig.colorbar(CSb)
 cbara.set_label('Type')
-cbara.set_ticks([0.375, 1.5-0.375, 1.5+0.375, 1.5+3*0.375])
-cbara.set_ticklabels(['Galaxies', 'Stars', 'X-ray sources', 'No-fit'])
+cbara.set_ticks([0.25, 0.75])#, 1.5+0.375, 1.5+3*0.375])
+cbara.set_ticklabels(['Not in CSC', 'In CSC'])#, 'Stars', 'X-ray sources', 'No-fit'])
 #cbarb.set_label('0.93 <= Z_spec')
 plt.show()
-

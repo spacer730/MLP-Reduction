@@ -67,8 +67,8 @@ CSC_Xray_indices = np.append(Xray_data1_indices, Xray_data2_indices+len(fdata_1)
 CSC_Xray_indices = np.append(CSC_Xray_indices, Xray_data3_indices+len(fdata_1)+len(fdata_2))
 
 COSMOS2015_Xray_indices = np.argwhere(source_type==2).flatten()
-union_indices = np.union1d(COSMOS2015_Xray_indices, Xray_indices)
-intersect_indices = np.intersect1d(COSMOS2015_Xray_indices, Xray_indices)
+union_indices = np.union1d(COSMOS2015_Xray_indices, CSC_Xray_indices)
+intersect_indices = np.intersect1d(COSMOS2015_Xray_indices, CSC_Xray_indices)
 
 Z_spec = np.append(Z_C3R2, Z_OldZCOSMOS)
 Z_spec = np.append(Z_spec, Z_C3R2_doubles)
@@ -76,8 +76,6 @@ Z_spec = np.append(Z_spec, Z_C3R2_doubles)
 #Some interesting lines to analyze the data
 np.abs(Z_OldZCOSMOS_doubles-Z_C3R2_doubles)>0.1
 source_type[source_type!=0]
-
-
 
 u_B, B_V, V_r, r_ip, ip_zpp, zpp_Y, Y_J, J_H, H_Ks = u-B, B-V, V-r, r-ip, ip-zpp, zpp-Y, Y-J, J-H, H-Ks
 
@@ -115,17 +113,15 @@ def indices_neighbors(center_index, eps, source_type_0=True):
         extra_sel = source_type==0
     else:
         extra_sel = np.ones(len(source_type), dtype=bool)
-
     arr = np.argwhere(np.linalg.norm(embedding[extra_sel]-embedding[extra_sel][center_index], axis=1)<eps).flatten()
     return arr[arr!=center_index] #only return the neighbours, not the index itself
 
-def z_umap_local_deviation(index, method=1, source_type_0=True,):
+def z_umap_local_deviation(index, eps, method=1, source_type_0=True,):
     if source_type_0==True:
         extra_sel = source_type==0
     else:
         extra_sel = np.ones(len(source_type), dtype=bool)
-
-    index_neighbors = indices_neighbors(index, 0.3, source_type_0)
+    index_neighbors = indices_neighbors(index, eps, source_type_0)
     z_local_avg = np.mean(Z_spec[extra_sel][index_neighbors])
     if len(index_neighbors)<2:
         return 0.1
@@ -135,6 +131,7 @@ def z_umap_local_deviation(index, method=1, source_type_0=True,):
         deviation = np.abs(Z_spec[extra_sel][index] - z_local_avg)/np.var(Z_spec[extra_sel][index_neighbors])
     return deviation
 
+"""
 num_neighbors_stype_0 = np.array([len(indices_neighbors(i,0.3, source_type_0=True)) for i in range(len(embedding[source_type==0]))])
 deviation_stype_0 = np.array([z_umap_local_deviation(i,method=1,source_type_0=True) for i in range(len(embedding[source_type==0]))])
 weighted_deviation_stype_0 = np.array([z_umap_local_deviation(i,method=2,source_type_0=True) for i in range(len(embedding[source_type==0]))])
@@ -151,24 +148,58 @@ outlier2_indices_stype_0 = np.array([i for i in range(len(embedding[source_type=
 orbiter2_indices_stype_0 = [indices_neighbors(outlier2_indices_stype_0[i],0.3,source_type_0=True) for i in range(len(outlier2_indices_stype_0))]
 orbiter2_indices_stype_0_flat = np.concatenate(orbiter2_indices_stype_0).ravel()
 
+crossmatched_indices = [index for index in outlier_indices_stype_0 if index in CSC_Xray_indices]
+crossmatched_indices_2 = [index for index in outlier2_indices_stype_0 if index in CSC_Xray_indices]
+
 #Now repeat all of that for the dataset with all sourcetypes included
 num_neighbors_stype_all = np.array([len(indices_neighbors(i,0.3, source_type_0=False)) for i in range(len(embedding))])
-deviation_stype_all = np.array([z_umap_local_deviation(i,method=1,source_type_0=False) for i in range(len(embedding))])
-weighted_deviation_stype_all = np.array([z_umap_local_deviation(i,method=2,source_type_0=False) for i in range(len(embedding))])
+deviation_stype_all = np.array([z_umap_local_deviation(i,0.3,method=1,source_type_0=False) for i in range(len(embedding))])
+weighted_deviation_stype_all = np.array([z_umap_local_deviation(i,0.3,method=2,source_type_0=False) for i in range(len(embedding))])
 
-outlier_criterium = 2
+outlier_criterium = 1.5
 outlier_indices_stype_all = np.array([i for i in range(len(embedding)) if ((deviation_stype_all[i]>=outlier_criterium)&(num_neighbors_stype_all[i]>10))])
 
 orbiter_indices_stype_all = [indices_neighbors(outlier_indices_stype_all[i],0.3,source_type_0=False) for i in range(len(outlier_indices_stype_all))]
 orbiter_indices_stype_all_flat = np.concatenate(orbiter_indices_stype_all).ravel()
 
-outlier2_criterium = 200
+outlier2_criterium = 100
 outlier2_indices_stype_all = np.array([i for i in range(len(embedding)) if ((weighted_deviation_stype_all[i]>=outlier2_criterium)&(num_neighbors_stype_all[i]>10))])
 
 orbiter2_indices_stype_all = [indices_neighbors(outlier2_indices_stype_all[i],0.3,source_type_0=False) for i in range(len(outlier2_indices_stype_all))]
 orbiter2_indices_stype_all_flat = np.concatenate(orbiter2_indices_stype_all).ravel()
 
+crossmatched_indices_3 = [index for index in outlier_indices_stype_all if index in COSMOS2015_Xray_indices]
+print("The number of outliers is "+str(len(outlier_indices_stype_all))+" and "+str(len(crossmatched_indices_3))+" of them are in the CSC catalog (selected using redshift deviation).")
+crossmatched_indices_4 = [index for index in outlier2_indices_stype_all if index in COSMOS2015_Xray_indices]
+print("The number of outliers is "+str(len(outlier2_indices_stype_all))+" and "+str(len(crossmatched_indices_4))+" of them are in the CSC catalog (selected using weighted redshift deviation).")
+"""
 
+def outliers(eps, outlier_criterium, outlier2_criterium, data_return=False):
+    num_neighbors_stype_all = np.array([len(indices_neighbors(i,eps, source_type_0=False)) for i in range(len(embedding))])
+    deviation_stype_all = np.array([z_umap_local_deviation(i,eps,method=1,source_type_0=False) for i in range(len(embedding))])
+    weighted_deviation_stype_all = np.array([z_umap_local_deviation(i,eps,method=2,source_type_0=False) for i in range(len(embedding))])
+    #
+    outlier_indices_stype_all = np.array([i for i in range(len(embedding)) if ((deviation_stype_all[i]>=outlier_criterium)&(num_neighbors_stype_all[i]>10))])
+    outlier2_indices_stype_all = np.array([i for i in range(len(embedding)) if ((weighted_deviation_stype_all[i]>=outlier2_criterium)&(num_neighbors_stype_all[i]>10))])
+    #
+    crossmatched_indices = [index for index in outlier_indices_stype_all if index in CSC_Xray_indices]
+    crossmatched_indices_2 = [index for index in outlier2_indices_stype_all if index in CSC_Xray_indices]
+    #
+    if data_return == True:
+        return outlier_indices_stype_all, outlier2_indices_stype_all
+    elif data_return == False:
+        return [(len(outlier_indices_stype_all), len(crossmatched_indices)), (len(outlier2_indices_stype_all), len(crossmatched_indices_2))]
+               
+outlier_criteria = np.arange(1,2.5,0.25)
+outlier2_criteria = np.arange(50,250,10)
+epsila = np.arange(0.1,1.2,0.2)
+outlier_results = [[] for i in range(len(epsila))]
+
+for j in range(len(epsila)):
+    outlier_results[j].append(outliers(epsila[j],1.5,100))
+    #for k in range(len(outlier_criteria):
+        #outlier_results[j].append(outliers(epsila[j],outlier_criteria[k],outlier2_criteria[k]))
+    
 def get_og_data_sourcetype0(indices_outliers):
     indices_outliers_1 = np.array([])
     indices_outliers_2 = np.array([])
@@ -184,12 +215,12 @@ def get_og_data_sourcetype0(indices_outliers):
         elif (index <= 24546):
             indices_outliers_3 = np.append(indices_outliers_3, index-24260)
         
-    data_outliers_1 = fdata_1[fdata_1['TYPE']==0][indices_outliers_1.astype(int)]
-    data_outliers_2 = fdata_2[fdata_2['TYPE']==0][indices_outliers_2.astype(int)]
-    data_outliers_3 = fdata_3[fdata_3['TYPE_1']==0][indices_outliers_3.astype(int)]
-    data_outliers_1.write("Data/KOA_c3r2_v2_COSMOS2015_Laigle+_v1.1_optical_nir_magnitudes_larger_90_no_doubles_old_ZCOSMOS_x_COSMOS2015_removed_larger_90_outliers.fits",format='fits')
-    data_outliers_2.write("Data/COSMOSadaptdepth_ugriZYJHKs_rot_photoz_x_G10CosmosCatv04_plus_observed_targets_09October2012_x_COSMOS2015_Laigle+_v1.1_removed_optical_nir_magnitudes_larger_90_no_doubles_C3R2_x_COSMOS2015_90_outliers.fits",format='fits')
-    data_outliers_3.write("Data/KOA_c3r2_v2_COSMOS2015_Laigle+_v1.1_optical_nir_magnitudes_larger_90_doubles_old_ZCOSMOS_x_COSMOS2015_removed_larger_90_outliers.fits",format='fits')
+    data_outliers_1 = fdata_1][indices_outliers_1.astype(int)]
+    data_outliers_2 = fdata_2[indices_outliers_2.astype(int)]
+    data_outliers_3 = fdata_3[indices_outliers_3.astype(int)]
+    data_outliers_1.write("Data/C3R2_x_COSMOS2015_no_doubles_old_ZCosmos_plus_CSC2_outliers.fits",format='fits')
+    data_outliers_2.write("Data/OldZCOSMOS_x_COSMOS2015_no_doubles_C3R2_plus_CSC2.fits",format='fits')
+    data_outliers_3.write("Data/C3R2_x_COSMOS2015_doubles_old_ZCosmos_plus_CSC2.fits",format='fits')
 
 """
 data_orbiters = fdata[og_normal_orbiters]

@@ -174,31 +174,98 @@ crossmatched_indices_4 = [index for index in outlier2_indices_stype_all if index
 print("The number of outliers is "+str(len(outlier2_indices_stype_all))+" and "+str(len(crossmatched_indices_4))+" of them are in the CSC catalog (selected using weighted redshift deviation).")
 """
 
-def outliers(eps, outlier_criterium, outlier2_criterium, data_return=False):
+def outliers(eps, outlier_criteria, outlier2_criteria, top_percent=False, data_return=False):
     num_neighbors_stype_all = np.array([len(indices_neighbors(i,eps, source_type_0=False)) for i in range(len(embedding))])
     deviation_stype_all = np.array([z_umap_local_deviation(i,eps,method=1,source_type_0=False) for i in range(len(embedding))])
     weighted_deviation_stype_all = np.array([z_umap_local_deviation(i,eps,method=2,source_type_0=False) for i in range(len(embedding))])
     #
-    outlier_indices_stype_all = np.array([i for i in range(len(embedding)) if ((deviation_stype_all[i]>=outlier_criterium)&(num_neighbors_stype_all[i]>10))])
-    outlier2_indices_stype_all = np.array([i for i in range(len(embedding)) if ((weighted_deviation_stype_all[i]>=outlier2_criterium)&(num_neighbors_stype_all[i]>10))])
-    #
-    crossmatched_indices = [index for index in outlier_indices_stype_all if index in CSC_Xray_indices]
-    crossmatched_indices_2 = [index for index in outlier2_indices_stype_all if index in CSC_Xray_indices]
+    results_outliers = []
+    results_outliers2 = []
+    if top_percent == False:
+        for k in range(len(outlier_criteria)):
+            outlier_indices_stype_all = np.array([i for i in range(len(embedding)) if ((deviation_stype_all[i]>=outlier_criteria[k])&(num_neighbors_stype_all[i]>5))])
+            crossmatched_indices = [index for index in outlier_indices_stype_all if index in CSC_Xray_indices]
+            results_outliers.append((len(outlier_indices_stype_all),len(crossmatched_indices)))
+        #
+        for j in range(len(outlier_criteria)):
+            outlier2_indices_stype_all = np.array([i for i in range(len(embedding)) if ((weighted_deviation_stype_all[i]>=outlier2_criteria[j])&(num_neighbors_stype_all[i]>5))])
+            crossmatched_indices_2 = [index for index in outlier2_indices_stype_all if index in CSC_Xray_indices]
+            results_outliers2.append((len(outlier2_indices_stype_all),len(crossmatched_indices_2)))
+    elif top_percent == True:
+        top_211_outlier_indices_stype_all = sorted(range(len(deviation_stype_all)), key=lambda i: deviation_stype_all[i])[-211:]
+        top_211_crossmatched_indices = [index for index in top_211_outlier_indices_stype_all if index in CSC_Xray_indices]
+        top_21_outlier_indices_stype_all = sorted(range(len(deviation_stype_all)), key=lambda i: deviation_stype_all[i])[-21:]
+        top_21_crossmatched_indices = [index for index in top_21_outlier_indices_stype_all if index in CSC_Xray_indices]
+        #
+        top_211_outlier2_indices_stype_all = sorted(range(len(weighted_deviation_stype_all)), key=lambda i: weighted_deviation_stype_all[i])[-211:]
+        top_211_crossmatched_indices_2 = [index for index in top_211_outlier2_indices_stype_all if index in CSC_Xray_indices]
+        top_21_outlier2_indices_stype_all = sorted(range(len(weighted_deviation_stype_all)), key=lambda i: weighted_deviation_stype_all[i])[-21:]
+        top_21_crossmatched_indices_2 = [index for index in top_21_outlier2_indices_stype_all if index in CSC_Xray_indices]
+        #
+        return (len(top_211_outlier_indices_stype_all),len(top_211_crossmatched_indices)),(len(top_21_outlier_indices_stype_all),len(top_21_crossmatched_indices)) \
+               ,(len(top_211_outlier2_indices_stype_all),len(top_211_crossmatched_indices_2)),(len(top_21_outlier2_indices_stype_all),len(top_21_crossmatched_indices_2))
     #
     if data_return == True:
         return outlier_indices_stype_all, outlier2_indices_stype_all
     elif data_return == False:
-        return [(len(outlier_indices_stype_all), len(crossmatched_indices)), (len(outlier2_indices_stype_all), len(crossmatched_indices_2))]
-               
+        return results_outliers, results_outliers2
+    #[(len(outlier_indices_stype_all), len(crossmatched_indices)), (len(outlier2_indices_stype_all), len(crossmatched_indices_2))]
+
+epsila5 = np.linspace(0.2,2,10)
+outlier_results5 = []
+for j in range(len(epsila5)):
+    outlier_results5.append(outliers(epsila5[j],1,1,top_percent=True))
+
+epsila6 = np.linspace(2.2,3,5)
+outlier_results6 = []
+for j in range(len(epsila6)):
+    outlier_results6.append(outliers(epsila6[j],1,1,top_percent=True))
+
+epsila7 = np.linspace(3.2,5,5)
+outlier_results7 = []
+for j in range(len(epsila7)):
+    outlier_results7.append(outliers(epsila7[j],1,1,top_percent=True))
+"""
+Some parameter space search:
+
 outlier_criteria = np.arange(1,2.5,0.25)
-outlier2_criteria = np.arange(50,250,10)
+outlier2_criteria = np.arange(75,225,25)
 epsila = np.arange(0.1,1.2,0.2)
 outlier_results = [[] for i in range(len(epsila))]
 
 for j in range(len(epsila)):
-    outlier_results[j].append(outliers(epsila[j],1.5,100))
+    outlier_results[j].append(outliers(epsila[j],outlier_criteria,outlier2_criteria))
     #for k in range(len(outlier_criteria):
         #outlier_results[j].append(outliers(epsila[j],outlier_criteria[k],outlier2_criteria[k]))
+
+epsila2 = np.arange(1.2,2.2,0.2)
+outlier_results2 = [[] for i in range(len(epsila))]
+
+for j in range(len(epsila2)):
+    outlier_results2[j].append(outliers(epsila2[j],outlier_criteria,outlier2_criteria))
+
+outlier_criteria2 = np.linspace(1,1.5,6)
+outlier2_criteria2 = np.linspace(25,75,6)
+epsila3 = np.linspace(0.1,0.5,5)
+outlier_results3 = [[] for i in range(len(epsila3))]
+
+for j in range(len(epsila3)):
+    outlier_results3[j].append(outliers(epsila3[j],outlier_criteria2,outlier2_criteria2))
+
+outlier_criteria3 = np.linspace(2.5,3.75,6)
+outlier2_criteria3 = np.linspace(25,75,6)
+epsila4 = epsila2
+outlier_results4 = [[] for i in range(len(epsila4))]
+
+for j in range(len(epsila4)):
+    outlier_results4[j].append(outliers(epsila4[j],outlier_criteria3,outlier2_criteria3))
+
+Some good criteria I found right now are:
+For ~1% outliers is: eps=0.3 and outlier_criterium=1.2 and outlier2_criterium=65
+For ~1% outliers is: eps=2.0 and outlier_criterium=1.5 and outlier2_criterium=15.8
+For ~0.1% outlier it is: eps=1.8 and outlier_criterium=2.5 and outlier2_criterium=45
+A smaller circle for ~0.1% outliers it is: eps=0.3 and outlier_criterium= and outlier2_criterium=
+"""
     
 def get_og_data_sourcetype0(indices_outliers):
     indices_outliers_1 = np.array([])

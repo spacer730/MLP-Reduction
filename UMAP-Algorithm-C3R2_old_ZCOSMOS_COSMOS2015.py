@@ -19,6 +19,9 @@ print('Openining the data files')
 fdata_1 = fits.open('Data/C3R2_x_COSMOS2015_no_doubles_old_ZCosmos_plus_CSC2.fits')[1].data
 fdata_2 = fits.open('Data/OldZCOSMOS_x_COSMOS2015_no_doubles_C3R2_plus_CSC2.fits')[1].data
 fdata_3 = fits.open('Data/C3R2_x_COSMOS2015_doubles_old_ZCosmos_plus_CSC2.fits')[1].data
+#fdata_1 = Table.read('Data/C3R2_x_COSMOS2015_no_doubles_old_ZCosmos_plus_CSC2.fits',format='fits')
+#fdata_2 = Table.read('Data/OldZCOSMOS_x_COSMOS2015_no_doubles_C3R2_plus_CSC2.fits',format='fits')
+#fdata_3 = Table.read('Data/C3R2_x_COSMOS2015_doubles_old_ZCosmos_plus_CSC2.fits',format='fits')
 #fdata_1 = Table.read('Data/KOA_c3r2_v2_COSMOS2015_Laigle+_v1.1_optical_nir_magnitudes_larger_90_no_doubles_old_ZCOSMOS_x_COSMOS2015_removed_larger_90.fits',format='fits')
 #fdata_2 = Table.read('Data/COSMOSadaptdepth_ugriZYJHKs_rot_photoz_x_G10CosmosCatv04_plus_observed_targets_09October2012_x_COSMOS2015_Laigle+_v1.1_removed_optical_nir_magnitudes_larger_90_no_doubles_C3R2_x_COSMOS2015_90.fits',format='fits')
 #fdata_3 = Table.read('Data/KOA_c3r2_v2_COSMOS2015_Laigle+_v1.1_optical_nir_magnitudes_larger_90_doubles_old_ZCOSMOS_x_COSMOS2015_removed_larger_90.fits',format='fits')
@@ -202,29 +205,16 @@ def outliers(eps, outlier_criteria, outlier2_criteria, top_percent=False, data_r
         top_21_outlier2_indices_stype_all = sorted(range(len(weighted_deviation_stype_all)), key=lambda i: weighted_deviation_stype_all[i])[-21:]
         top_21_crossmatched_indices_2 = [index for index in top_21_outlier2_indices_stype_all if index in CSC_Xray_indices]
         #
-        return (len(top_211_outlier_indices_stype_all),len(top_211_crossmatched_indices)),(len(top_21_outlier_indices_stype_all),len(top_21_crossmatched_indices)) \
-               ,(len(top_211_outlier2_indices_stype_all),len(top_211_crossmatched_indices_2)),(len(top_21_outlier2_indices_stype_all),len(top_21_crossmatched_indices_2))
+        if data_return == False:
+            return (len(top_211_outlier_indices_stype_all),len(top_211_crossmatched_indices)),(len(top_21_outlier_indices_stype_all),len(top_21_crossmatched_indices)) \
+                   ,(len(top_211_outlier2_indices_stype_all),len(top_211_crossmatched_indices_2)),(len(top_21_outlier2_indices_stype_all),len(top_21_crossmatched_indices_2))
     #
     if data_return == True:
-        return outlier_indices_stype_all, outlier2_indices_stype_all
+        return top_211_outlier_indices_stype_all, top_21_outlier_indices_stype_all, top_211_outlier2_indices_stype_all, top_21_outlier2_indices_stype_all
     elif data_return == False:
         return results_outliers, results_outliers2
     #[(len(outlier_indices_stype_all), len(crossmatched_indices)), (len(outlier2_indices_stype_all), len(crossmatched_indices_2))]
 
-epsila5 = np.linspace(0.2,2,10)
-outlier_results5 = []
-for j in range(len(epsila5)):
-    outlier_results5.append(outliers(epsila5[j],1,1,top_percent=True))
-
-epsila6 = np.linspace(2.2,3,5)
-outlier_results6 = []
-for j in range(len(epsila6)):
-    outlier_results6.append(outliers(epsila6[j],1,1,top_percent=True))
-
-epsila7 = np.linspace(3.2,5,5)
-outlier_results7 = []
-for j in range(len(epsila7)):
-    outlier_results7.append(outliers(epsila7[j],1,1,top_percent=True))
 """
 Some parameter space search:
 
@@ -260,39 +250,52 @@ outlier_results4 = [[] for i in range(len(epsila4))]
 for j in range(len(epsila4)):
     outlier_results4[j].append(outliers(epsila4[j],outlier_criteria3,outlier2_criteria3))
 
-Some good criteria I found right now are:
-For ~1% outliers is: eps=0.3 and outlier_criterium=1.2 and outlier2_criterium=65
-For ~1% outliers is: eps=2.0 and outlier_criterium=1.5 and outlier2_criterium=15.8
-For ~0.1% outlier it is: eps=1.8 and outlier_criterium=2.5 and outlier2_criterium=45
-A smaller circle for ~0.1% outliers it is: eps=0.3 and outlier_criterium= and outlier2_criterium=
+epsila5 = np.linspace(0.2,2,10)
+outlier_results5 = []
+for j in range(len(epsila5)):
+    outlier_results5.append(outliers(epsila5[j],1,1,top_percent=True))
+
+epsila6 = np.linspace(2.2,3,5)
+outlier_results6 = []
+for j in range(len(epsila6)):
+    outlier_results6.append(outliers(epsila6[j],1,1,top_percent=True))
+
+epsila7 = np.linspace(3.2,5,5)
+outlier_results7 = []
+for j in range(len(epsila7)):
+    outlier_results7.append(outliers(epsila7[j],1,1,top_percent=True))
 """
+
+indices_top_arr = outliers(0.6, 1, 1, top_percent=True, data_return=True)
+indices_top_21_redshift_deviation = indices_top_arr[1]
+indices_top_211_redshift_deviation = indices_top_arr[0]
+indices_top_21_weighted_redshift_deviation = outliers(1.8, 1, 1, top_percent=True, data_return=True)[3]
+indices_top_211_weighted_redshift_deviation = outliers(3.2, 1, 1, top_percent=True, data_return=True)[2]
     
-def get_og_data_sourcetype0(indices_outliers):
+def get_data_indices(indices_outliers):
     indices_outliers_1 = np.array([])
     indices_outliers_2 = np.array([])
     indices_outliers_3 = np.array([])
-    
+    #
     for index in indices_outliers:
-        if (0 <= index) & (index <= 2016):
+        if (0 <= index) & (index <= 2101):
             indices_outliers_1 = np.append(indices_outliers_1, index)
         
-        elif (index <= 24259):
-            indices_outliers_2 = np.append(indices_outliers_2, index-2017)
+        elif (index <= 20886):
+            indices_outliers_2 = np.append(indices_outliers_2, index-2102)
         
-        elif (index <= 24546):
-            indices_outliers_3 = np.append(indices_outliers_3, index-24260)
-        
-    data_outliers_1 = fdata_1][indices_outliers_1.astype(int)]
+        elif (index <= 21113):
+            indices_outliers_3 = np.append(indices_outliers_3, index-20887)
+    #
+    data_outliers_1 = fdata_1[indices_outliers_1.astype(int)]
     data_outliers_2 = fdata_2[indices_outliers_2.astype(int)]
     data_outliers_3 = fdata_3[indices_outliers_3.astype(int)]
-    data_outliers_1.write("Data/C3R2_x_COSMOS2015_no_doubles_old_ZCosmos_plus_CSC2_outliers.fits",format='fits')
-    data_outliers_2.write("Data/OldZCOSMOS_x_COSMOS2015_no_doubles_C3R2_plus_CSC2.fits",format='fits')
-    data_outliers_3.write("Data/C3R2_x_COSMOS2015_doubles_old_ZCosmos_plus_CSC2.fits",format='fits')
-
-"""
-data_orbiters = fdata[og_normal_orbiters]
-data_orbiters.write("_orbiters.fits",format='fits')
-"""
+    new_hdu_1 = fits.BinTableHDU.from_columns(data_outliers_1._get_raw_data())
+    new_hdu_2 = fits.BinTableHDU.from_columns(data_outliers_2._get_raw_data())
+    new_hdu_3 = fits.BinTableHDU.from_columns(data_outliers_3._get_raw_data())
+    new_hdu_1.writeto("Data/Outliers/C3R2_x_COSMOS2015_no_doubles_old_ZCosmos_plus_CSC2_211_outliers_eps_3dot2.fits")
+    new_hdu_2.writeto("Data/Outliers/OldZCOSMOS_x_COSMOS2015_no_doubles_C3R2_plus_CSC2_211_outliers_eps_3dot2.fits")
+    new_hdu_3.writeto("Data/Outliers/C3R2_x_COSMOS2015_doubles_old_ZCosmos_plus_CSC2_211_outliers_eps_3dot2.fits")
 
 """
 #Normal Map
